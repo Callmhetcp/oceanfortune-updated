@@ -325,7 +325,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             .then((response) => response.json())
                                             .then((data) => {
                                                 if (data.success) {
-                                                    alert("Payment is pending, waiting for admin approval.");
+                                                    alert("Deposit is pending, waiting for admin approval.");
                                                     window.location.href = "deposit.php"; // Redirect to deposit page
                                                 } else {
                                                     alert("Error: " + (data.error || "There was an error processing your payment."));

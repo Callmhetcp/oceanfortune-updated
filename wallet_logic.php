@@ -11,7 +11,7 @@ if (!isset($_SESSION['user_id'])) {
 $userId = $_SESSION['user_id'];
 
 // Query to get the user's crypto data from the database
-$query = "SELECT crypto_symbol, amount FROM transactions WHERE user_id = ? AND status = 'completed'";
+$query = "SELECT crypto_symbol,transaction_type, amount FROM transactions WHERE user_id = ? AND status = 'completed'";
 $stmt = $conn->prepare($query);
 $stmt->bind_param('i', $userId);
 $stmt->execute();
@@ -22,10 +22,25 @@ $cryptoData = [];
 while ($row = $result->fetch_assoc()) {
     $symbol = $row['crypto_symbol'];
     $amount = floatval($row['amount']); // Ensure the amount is a number
-    if (isset($cryptoData[$symbol])) {
-        $cryptoData[$symbol] += $amount;
-    } else {
-        $cryptoData[$symbol] = $amount;
+    $type = $row['transaction_type'];
+    if ($type=== 'Deposit') {
+        //add amount for deposit
+        if (isset($cryptoData[$symbol])) {
+            $cryptoData[$symbol] += $amount;
+        } else {
+            $cryptoData[$symbol] = $amount;
+        }
+    } elseif ($type === 'Withdrawal') {
+        // Subtract amount for withdrawals
+        if (isset($cryptoData[$symbol])) {
+            // Check if the balance is sufficient (greater than or equal to the withdrawal amount)
+        if ($cryptoData[$symbol] >= $amount) {
+            // Subtract amount for withdrawals
+            $cryptoData[$symbol] -= $amount;
+        }
+        } else {
+            $cryptoData[$symbol] = -$amount; // Initialize with negative value
+        }
     }
 }
 
