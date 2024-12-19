@@ -242,34 +242,69 @@ $email = $_SESSION['user_email'] ;
                           <span id="amount" >$<?php echo number_format($balance, 2); ?></span>
 
                           <script>
-                            // function scrambleText(element, originalText, steps, interval) {
-                            //   const characters = '0123456789$,.'; // Characters used for scrambling
-                            //   let scrambled = originalText.split('');
-                              
-                            //   let step = 0;
-                            //   const scrambleInterval = setInterval(() => {
-                            //     step++;
-                            //     scrambled = scrambled.map((char, i) => 
-                            //       Math.random() < 0.5 && step < steps ? characters.charAt(Math.floor(Math.random() * characters.length)) : originalText[i]
-                            //     );
-                            //     element.textContent = scrambled.join('');
-                        
-                            //     if (step >= steps) {
-                            //       clearInterval(scrambleInterval);
-                            //       element.textContent = originalText; // Restore original text
-                            //     }
-                            //   }, interval);
-                            // }
-                        
-                            const span = document.querySelector('#amount');
-                            const originalText = '$<?php echo number_format($balance, 2); ?>';
-                        
-                            scrambleText(span, originalText, 15, 100); 
-                        
-                            setInterval(() => {
-                              scrambleText(span, originalText, 15, 100);
-                            }, 4000); 
-                          </script>
+    /**
+     * Scrambles the text of an element to create an animated effect.
+     * @param {HTMLElement} element - The DOM element to apply the effect on.
+     * @param {string} originalText - The original text to restore after scrambling.
+     * @param {number} steps - Number of scrambling steps.
+     * @param {number} interval - Time interval (ms) between each scrambling step.
+     */
+    function scrambleText(element, originalText, steps, interval) {
+        const characters = '0123456789$,.';
+        let scrambled = originalText.split('');
+        let step = 0;
+
+        // const scrambleInterval = setInterval(() => {
+        //     step++;
+        //     scrambled = scrambled.map((char, i) =>
+        //         Math.random() < 0.5 && step < steps
+        //             ? characters.charAt(Math.floor(Math.random() * characters.length))
+        //             : originalText[i]
+        //     );
+
+        //     element.textContent = scrambled.join('');
+
+        //     // Stop scrambling and restore original text after the defined steps
+        //     if (step >= steps) {
+        //         clearInterval(scrambleInterval);
+        //         element.textContent = originalText;
+        //     }
+        // }, interval);
+    }
+
+    // Get the target element and original text
+    const span = document.querySelector('#amount');
+    const originalBalance = '$<?php echo number_format($balance, 2); ?>';
+
+    /**
+     * Checks the network status and updates the balance.
+     */
+    function updateBalanceBasedOnNetwork() {
+        if (!navigator.onLine) {
+            // Set balance to $0.00 if offline
+            span.textContent = '$0.00';
+        } else {
+            // Restore the original balance when online
+            scrambleText(span, originalBalance, 15, 100);
+        }
+    }
+
+    // Initial scramble animation
+    scrambleText(span, originalBalance, 15, 100);
+
+    // Re-scramble every 4 seconds
+    setInterval(() => {
+        updateBalanceBasedOnNetwork();
+    }, 4000);
+
+    // Listen for online/offline events to dynamically update balance
+    window.addEventListener('online', updateBalanceBasedOnNetwork);
+    window.addEventListener('offline', updateBalanceBasedOnNetwork);
+
+    // Run the initial network check
+    updateBalanceBasedOnNetwork();
+</script>
+
                         </body>
                       </div>
                   </div>
