@@ -346,107 +346,147 @@
         </div>
     </section>
 
+    <?php
+    
+    include 'wallet_logic.php';
+    
+    ?>
+
     <script src="assets/user/javascript/popup.js"></script>
     <script>
-            const cryptoOptions = document.querySelectorAll('.crypto-option');
-            const selectedCrypto = document.getElementById('selectedCrypto');
-            const selectedCryptoDataInput = document.getElementById('selectedCryptoData');
-            const amountInput = document.getElementById('amount');
-            const walletInput = document.getElementById('wallet');
-            const copyButton = document.getElementById('copyButton');
-            const cryptoForm = document.getElementById("cryptoForm");
-            let currentSelection = null;
+document.addEventListener("DOMContentLoaded", () => {
+    const cryptoOptions = document.querySelectorAll('.crypto-option');
+    const selectedCrypto = document.getElementById('selectedCrypto');
+    const selectedCryptoDataInput = document.getElementById('selectedCryptoData');
+    const amountInput = document.getElementById('amount');
+    const walletInput = document.getElementById('wallet');
+    const copyButton = document.getElementById('copyButton');
+    const cryptoForm = document.getElementById("cryptoForm");
+    const errorMessage = document.getElementById("error");
+    const depositButton = document.getElementById('depositButton');
+    let currentSelection = null;
 
-            function updateCryptoData() {
-                if (!currentSelection) return;
+    // PHP variable passed to JS (user's crypto balances)
+    const cryptoBalances = <?php echo json_encode($cryptoData); ?>;
 
-                const name = currentSelection.dataset.name;
-                const symbol = currentSelection.dataset.symbol;
-                const imageUrl = currentSelection.dataset.imageUrl;
-                const amount = amountInput.value;
-                const walletValue = walletInput.value.trim(); 
-                selectedCrypto.innerHTML = `
-                    <img src="${imageUrl}" alt="${name}">
-                    <div>
-                        <span class="selected-name">${name}</span>
-                        <span class="selected-ticker">${symbol}</span>
-                    </div>
-                `;
-                selectedCrypto.classList.add('has-selection');
+    function updateCryptoData() {
+        if (!currentSelection) return;
 
-                if (walletValue) {
-                    copyButton.style.display = 'inline-block';
-                } else {
-                    copyButton.style.display = 'none';
-                }
+        const name = currentSelection.dataset.name;
+        const symbol = currentSelection.dataset.symbol;
+        const imageUrl = currentSelection.dataset.imageUrl;
+        const amount = amountInput.value;
+        const walletValue = walletInput.value.trim(); 
+        selectedCrypto.innerHTML = `
+            <img src="${imageUrl}" alt="${name}">
+            <div>
+                <span class="selected-name">${name}</span>
+                <span class="selected-ticker">${symbol}</span>
+            </div>
+        `;
+        selectedCrypto.classList.add('has-selection');
 
-                selectedCryptoDataInput.value = JSON.stringify({
-                    id: currentSelection.dataset.id,
-                    symbol: symbol,
-                    name: name,
-                    imageUrl: imageUrl,
-                    amount: amount,  
-                    wallet: walletValue
-                });
+        if (walletValue) {
+            copyButton.style.display = 'inline-block';
+        } else {
+            copyButton.style.display = 'none';
+        }
+
+        selectedCryptoDataInput.value = JSON.stringify({
+            id: currentSelection.dataset.id,
+            symbol: symbol,
+            name: name,
+            imageUrl: imageUrl,
+            amount: amount,  
+            wallet: walletValue
+        });
+
+        // Validate amount whenever the crypto selection or amount changes
+        validateAmount();
+    }
+
+    function validateAmount() {
+        if (!currentSelection) return;
+
+        const selectedSymbol = currentSelection.dataset.symbol;
+        const enteredAmount = parseFloat(amountInput.value) || 0;
+        const availableBalance = cryptoBalances[selectedSymbol] || 0;
+
+        // If entered amount exceeds available balance, display error and disable "Deposit" button
+        if (enteredAmount > availableBalance) {
+            errorMessage.innerHTML = `Insufficient balance for ${selectedSymbol}. Available: ${availableBalance.toFixed(8)}`;
+            errorMessage.style.display = "block";
+            // Disable the "Deposit" button
+            depositButton.disabled = true;
+            return false;
+        } else {
+            // Hide error message and enable "Deposit" button
+            errorMessage.style.display = "none";
+            depositButton.disabled = false;
+            return true;
+        }
+    }
+
+    // Attach click event to crypto options
+    cryptoOptions.forEach(option => {
+        option.addEventListener('click', () => {
+            if (currentSelection) {
+                currentSelection.classList.remove('selected');
             }
 
-            cryptoOptions.forEach(option => {
-                option.addEventListener('click', () => {
-                    if (currentSelection) {
-                        currentSelection.classList.remove('selected');
-                    }
+            option.classList.add('selected');
+            currentSelection = option;
 
-                    option.classList.add('selected');
-                    currentSelection = option;
+            updateCryptoData();
+        });
+    });
 
-                    updateCryptoData();
-                });
-            });
+    // Add input listeners for wallet and amount fields
+    walletInput.addEventListener('input', updateCryptoData);
+    amountInput.addEventListener('input', updateCryptoData);  
 
-            walletInput.addEventListener('input', updateCryptoData);
-            amountInput.addEventListener('input', updateCryptoData);  
+    // Copy wallet address to clipboard
+    copyButton.addEventListener('click', () => {
+        const wallet = walletInput.value;
+        const copyMessage = document.getElementById("copyMessage");
 
-            function copyToClipboard() {
-                const wallet = walletInput.value;
-                const copyMessage = document.getElementById("copy");
+        navigator.clipboard.writeText(wallet).then(() => {
+            copyMessage.innerHTML = "Copied to clipboard!";
+            copyMessage.style.display = "block";
 
-                navigator.clipboard.writeText(wallet).then(() => {
-                    copyMessage.innerHTML = "Copied to clipboard!";
-                    copyMessage.style.display = "block";
+            setTimeout(() => {
+                copyMessage.style.display = "none";
+            }, 2000);
+        }).catch(err => {
+            window.alert('Failed to copy to clipboard: ' + err);
+        });
+    });
 
-                    setTimeout(() => {
-                        copyMessage.style.display = "none";
-                    }, 2000);
-                }).catch(err => {
-                    window.alert('Failed to copy to clipboard: ' + err);
-                });
-            }
+    // Form submission validation
+    cryptoForm.addEventListener("submit", function (event) {
+        const walletValue = walletInput.value.trim();
 
-            cryptoForm.addEventListener("submit", function (event) {
-                const errorMessage = document.getElementById("error");
-                const walletValue = walletInput.value.trim();
+        if (!walletValue) {
+            event.preventDefault();
+            errorMessage.innerHTML = "Wallet address cannot be empty!";
+            errorMessage.style.display = "block";
+            return;
+        }
 
-                if (!walletValue) {
-                    event.preventDefault();
-                    errorMessage.innerHTML = "Wallet address cannot be empty!";
-                    errorMessage.style.display = "block";
+        if (!currentSelection) {
+            event.preventDefault();
+            errorMessage.innerHTML = "No cryptocurrency selected!";
+            errorMessage.style.display = "block";
+            return;
+        }
 
-                    setTimeout(() => {
-                        errorMessage.style.display = "none";
-                    }, 2000);
-                }
+        if (!validateAmount()) {
+            event.preventDefault(); // Prevent form submission if balance is insufficient
+        }
+    });
+});
+</script>
 
-                if (!currentSelection) {
-                    event.preventDefault();
-                    errorMessage.innerHTML = "No cryptocurrency selected!";
-                    errorMessage.style.display = "block";
-
-                    setTimeout(() => {
-                        errorMessage.style.display = "none";
-                    }, 2000);
-                }
-            });
-    </script>
 
     <script src="assets/javascript/active-tab.js"></script>
 
